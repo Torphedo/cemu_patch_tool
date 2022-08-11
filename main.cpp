@@ -3,24 +3,23 @@
 #include <fstream>
 #include <conio.h>
 
-using namespace std;
 
 int main(int argc, char* argv[])
 {
     if (argc == 1)
     {
-        cout << "Select a C or C++ source file.\n\nPress any key to exit...\n";
+        std::cout << "Select a C or C++ source file.\n\nPress any key to exit...\n";
         char _dummy = _getch();
         return 1;
     }
     else
     {
         // Get file extension
-        string temp(argv[1]);
+        std::string temp(argv[1]);
         size_t i = temp.rfind('.', temp.length());
-        string FileExtension = temp.substr(i + 1, temp.length() - i);
+        std::string FileExtension = temp.substr(i + 1, temp.length() - i);
 
-        string command = "C:\\devkitPro\\devkitPPC\\bin\\powerpc-eabi-g++.exe -emit-llvm -O1 -mbig-endian -m32 -fno-ident ";
+        std::string command = "C:\\devkitPro\\devkitPPC\\bin\\powerpc-eabi-g++.exe -emit-llvm -O1 -mbig-endian -m32 -fno-ident ";
         if (FileExtension == "cpp")
         {
             command.append("-std=c++11 -fno-rtti ");
@@ -30,15 +29,15 @@ int main(int argc, char* argv[])
         command.append("-falign-labels=4 -falign-jumps=4 -falign-loops=4 -S -otemp.asm ");
         command.append(argv[1]);
         system(const_cast<char*>(command.c_str())); // Run G++ compile
-        cout << command;
+        std::cout << command;
 
-        fstream AssemblySrc;
-        ofstream AssemblyOut;
-        AssemblySrc.open("temp.asm", ios::in);
+        std::fstream AssemblySrc;
+        std::ofstream AssemblyOut;
+        AssemblySrc.open("temp.asm", std::ios::in);
         if (AssemblySrc.is_open())
         {
-            string line;
-            AssemblyOut.open("output.asm", ios::out);
+            std::string line;
+            AssemblyOut.open("output.asm", std::ios::out);
             while (getline(AssemblySrc, line))
             {
                 // Remove compiler clutter
