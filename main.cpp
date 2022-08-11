@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
                 // Replace GCC's weird "%r#" register notation
                 while (line.find("%r") != -1)
                 {
-                    int pos = line.find("%r");
+                    size_t pos = line.find("%r");
                     if (pos != -1)
                     {
                         line.replace(pos, 2, "r");
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
                 }
                 while (line.find("%cr") != -1)
                 {
-                    int pos = line.find("%cr");
+                    size_t pos = line.find("%cr");
                     if (pos != -1)
                     {
                         line.replace(pos, 3, "cr");
