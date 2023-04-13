@@ -3,78 +3,57 @@
 #include <fstream>
 #include <conio.h>
 
+#include "asm_functions.h"
 
-int main(int argc, char* argv[])
-{
-    if (argc == 1)
-    {
-        std::cout << "Select a C or C++ source file.\n\nPress any key to exit...\n";
-        char _dummy = _getch();
+int main(int argc, char** argv) {
+    static const char* input = argv[1];
+
+    if (argc == 1) {
+        printf("main(): Input an assembly file to process.\n");
+        system("pause");
         return 1;
     }
-    else
-    {
-        // Get file extension
-        std::string temp(argv[1]);
-        size_t i = temp.rfind('.', temp.length());
-        std::string FileExtension = temp.substr(i + 1, temp.length() - i);
-
-        std::string command = "C:\\devkitPro\\devkitPPC\\bin\\powerpc-eabi-g++.exe -emit-llvm -O1 -mbig-endian -m32 -fno-ident ";
-        if (FileExtension == "cpp")
-        {
-            command.append("-std=c++11 -fno-rtti ");
-        }
-        command.append("-fno-toplevel-reorder -mregnames -fno-function-sections -ffreestanding -fno-data-sections -msdata=none ");
-        command.append("-mno-sdata -fno-exceptions -fno-omit-frame-pointer -fno-asynchronous-unwind-tables -falign-functions=4 ");
-        command.append("-falign-labels=4 -falign-jumps=4 -falign-loops=4 -S -otemp.asm ");
-        command.append(argv[1]);
-        system(const_cast<char*>(command.c_str())); // Run G++ compile
-        std::cout << command;
-
-        std::fstream AssemblySrc;
-        std::ofstream AssemblyOut;
-        AssemblySrc.open("temp.asm", std::ios::in);
-        if (AssemblySrc.is_open())
-        {
+    else {
+        std::fstream asm_src;
+        FILE* asm_out = fopen("processed.asm", "wb");
+        asm_src.open(input, std::ios::in);
+        if (asm_src.is_open() && asm_out != NULL) {
+            fprintf(asm_out, "[YourPatchNamehere]\nmoduleMatches = 0x6267bfd0\n.origin = codecave\n\nentry_address = 0x2d5b828\n\n%s\n", return_func);
+            fprintf(asm_out, "entry_point:\n%s\nbla main ; Call user code.\n%s\n", save_registers_func, restore_registers_func);
             std::string line;
-            AssemblyOut.open("output.asm", std::ios::out);
-            while (getline(AssemblySrc, line))
-            {
+            while (getline(asm_src, line)) {
                 // Remove compiler clutter
-                if (line.find("	.file") == 0 || line.find("	.text") == 0 || line.find("	.globl") == 0 ||
-                    line.find("	.type") == 0 || line.find("	.size") == 0 || line.find("	.section") == 0 ||
-                    line.find("	.weak") == 0 || line.find("	.data") == 0 || line.find("	.ident") == 0 ||
-                    line.find("	.addrsig") == 0 || line.find("	.addrsig_sym") == 0 || line.find("	.machine") == 0 ||
-                    line.find("	.align") == 0 || line.find("	.gnu_attribute") == 0 || line.find("	.lcomm") == 0)
+                if (line.find("\t.file") == 0 || line.find("\t.text") == 0 || line.find("\t.globl") == 0 ||
+                    line.find("\t.type") == 0 || line.find("\t.size") == 0 || line.find("\t.section") == 0 ||
+                    line.find("\t.weak") == 0 || line.find("\t.data") == 0 || line.find("\t.ident") == 0 ||
+                    line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
+                    line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
+                    line.find("\tbl __eabi") == 0)
                 {
                     continue; // Skip this line
                 }
 
                 // Replace GCC's weird "%r#" register notation
-                while (line.find("%r") != -1)
-                {
+                while (line.find("%r") != -1) {
                     size_t pos = line.find("%r");
-                    if (pos != -1)
-                    {
+                    if (pos != -1) {
                         line.replace(pos, 2, "r");
                     }
                 }
-                while (line.find("%cr") != -1)
-                {
+                while (line.find("%cr") != -1) {
                     size_t pos = line.find("%cr");
-                    if (pos != -1)
-                    {
+                    if (pos != -1) {
                         line.replace(pos, 3, "cr");
                     }
                 }
 
                 // Print to file
-                AssemblyOut << line << "\n";
+                fwrite(line.c_str(), line.size(), 1, asm_out);
+                fprintf(asm_out, "\n");
             }
-            AssemblyOut.close();
-            AssemblySrc.close();
-
-            remove("temp.asm");
+            fprintf(asm_out, "\n\n.origin = entry_address\nentry: ; This branch instruction replaces the original instruction.\nb entry_point\nreturn_address: ; Branching to this label will return to vanilla code.\n");
+            fclose(asm_out);
+            asm_src.close();
         }
     }
 }
