@@ -56,6 +56,9 @@ int main(int argc, char** argv) {
                     }
                 }
 
+                // I'm sorry for this code...it's really janky, but it does the job.
+                // See Appendix B.9 Miscellaneous Mnemonics in this PDF:
+                // https://arcb.csc.ncsu.edu/~mueller/cluster/ps3/SDK3.0/docs/arch/PPC_Vers202_Book1_public.pdf
                 if (line.find("\tla ") == 0) {
                     // Replace "la" with "addi"
                     line.replace(0, 3, "\taddi");
