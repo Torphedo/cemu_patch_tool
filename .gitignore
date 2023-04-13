@@ -1,4 +1,11 @@
+# VS2022
 .vs/
 x64/
+
+# IntelliJ
+.idea/
+
+# Build Outputs
+out/
 *.exe
 *.asm
