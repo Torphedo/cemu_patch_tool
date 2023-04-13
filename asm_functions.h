@@ -77,11 +77,5 @@ const char restore_registers_func[] = {
         "lwzu r2,  4(r1)\n"
         "lwzu r0,  4(r1)\n"
         "addi r1, r1, 4\n"
-        "b return\n"
-};
-
-const char return_func[] = {
-        "return:\n"
-        "mr r30, r3 ; Vanilla instruction. Replace this when you change the entry address.\n"
         "b return_address\n"
 };
