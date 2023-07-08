@@ -1,3 +1,6 @@
-project(ppc_patch_compiler CXX)
+project(cemu_patch_tool CXX)
 
-add_executable(ppc_patch_compiler main.cpp)
+set(CMAKE_CXX_STANDARD 98)
+
+add_executable(cemu_patch_tool main.cpp)
+
