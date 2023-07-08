@@ -1,7 +1,8 @@
+#include <stdlib.h>
+#include <string.h>
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <conio.h>
 
 #include "asm_functions.h"
 
@@ -10,7 +11,9 @@ int main(int argc, char** argv) {
 
     if (argc == 1) {
         printf("main(): Input an assembly file to process.\n");
+        #ifdef __WIN32
         system("pause");
+        #endif
         return 1;
     }
     else {
