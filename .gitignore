@@ -2,10 +2,16 @@
 .vs/
 x64/
 
-# IntelliJ
+# JetBrains
 .idea/
+
+# NeoVim
+.cache/
+compile_commands.json
 
 # Build Outputs
 out/
+cmake-*/
+cmake_*/
 *.exe
 *.asm
