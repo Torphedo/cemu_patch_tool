@@ -4,25 +4,42 @@
 #include <string>
 #include <fstream>
 
+#include "logging.h"
 #include "asm_functions.h"
 
 int main(int argc, char** argv) {
   static const char* input = argv[1];
+  static const char* module_name = argv[2];
+  static const char* hook_addr = argv[3];
 
-  if (argc == 1) {
-    printf("main(): Input an assembly file to process.\n");
-    #ifdef __WIN32
-    system("pause");
-    #endif
+  // Errors, info, and instructions for new users.
+  if (argc < 3) {
+    LOG_MSG(error, "Not enough arguments provided.\n");
+
+    LOG_MSG(info, "CLI usage:\n");
+    printf("\tcemu_patch_tool [ASM file] [patch module name] [hooking address]\n");
+
+    LOG_MSG(info, "The ASM file is the output from your compiler.\n");
+    LOG_MSG(info, "The module name is used to find your patch in the Cemu debugger.\n");
+    LOG_MSG(info, "The hooking address is the address that will be forced to call your main() function.\n");
+    printf("\tAll registers are saved before your code runs and restored afterwards.\n");
+    printf("\tThe address must be 7-8 digits of hexidecimal, like \"0x02d5b828\" or \"0x2d5b828\".\n");
     return 1;
   }
+  // All arguments were provided
   else {
     std::fstream asm_src;
     FILE* asm_out = fopen("processed.asm", "wb");
     asm_src.open(input, std::ios::in);
     if (asm_src.is_open() && asm_out != NULL) {
-      fprintf(asm_out, "[YourPatchNamehere]\nmoduleMatches = 0x6267bfd0\n.origin = codecave\n\n");
+      fprintf(asm_out, "[%s]\n", module_name);
+      fprintf(asm_out, "moduleMatches = 0x6267bfd0\n.origin = codecave\n\n");
+
+      /* The entry_point label saves all registers to the stack, calls the user's
+       * main() function, then reloads all register data from the stack.
+       */
       fprintf(asm_out, "entry_point:\n%s\nbla main ; Call user code.\n%s\n", save_registers_func, restore_registers_func);
+
       std::string line;
       while (getline(asm_src, line)) {
         // Remove compiler clutter
@@ -85,7 +102,12 @@ int main(int argc, char** argv) {
         fwrite(line.c_str(), line.size(), 1, asm_out);
         fprintf(asm_out, "\n");
       }
-      fprintf(asm_out, "\n\n.origin = 0x2d5b828\nentry: ; This branch instruction replaces the original instruction.\nb entry_point\nreturn_address: ; Branching to this label will return to vanilla code.\n");
+      
+      // Instructions placed after the ".origin" will start replacing from the hooking address.
+      fprintf(asm_out, "\n\n.origin = %s", hook_addr); 
+      fprintf(asm_out, "\nentry: \nb entry_point ; This branch instruction replaces the original instruction.");
+      fprintf(asm_out, "\nreturn_address: ; Branching to this label will return to vanilla code.\n");
+
       fclose(asm_out);
       asm_src.close();
     }
