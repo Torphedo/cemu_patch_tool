@@ -6,7 +6,7 @@ your C/C++ code won't impact the CPU state after it returns to game code.
 
 ## Usage
 ```
-cemu_patch_tool [ASM file] [patch module name] [hooking address]
+cemu_patch_tool [ASM file] [patch module name] [hooking address] [output filename]
 ```
 
 ### ASM File
@@ -23,4 +23,7 @@ The instruction at this address will be replaced with a branch instruction. It
 will save the CPU state onto the stack, run your code, then restore the CPU
 state and go back to the original game code.
 
-The tool will produce a `processed.asm` file as output.
+### Output Filename
+The program will output the final formatted patch file for Cemu to a filename
+you provide.
+

@@ -11,25 +11,27 @@ int main(int argc, char** argv) {
   static const char* input = argv[1];
   static const char* module_name = argv[2];
   static const char* hook_addr = argv[3];
+  static const char* output_filename = argv[4];
 
   // Errors, info, and instructions for new users.
   if (argc < 3) {
     LOG_MSG(error, "Not enough arguments provided.\n");
 
     LOG_MSG(info, "CLI usage:\n");
-    printf("\tcemu_patch_tool [ASM file] [patch module name] [hooking address]\n");
+    printf("\tcemu_patch_tool [ASM file] [patch module name] [hooking address] [output filename]\n");
 
     LOG_MSG(info, "The ASM file is the output from your compiler.\n");
     LOG_MSG(info, "The module name is used to find your patch in the Cemu debugger.\n");
     LOG_MSG(info, "The hooking address is the address that will be forced to call your main() function.\n");
     printf("\tAll registers are saved before your code runs and restored afterwards.\n");
     printf("\tThe address must be 7-8 digits of hexidecimal, like \"0x02d5b828\" or \"0x2d5b828\".\n");
+    LOG_MSG(info, "The output file is the final patch filename.\n");
     return 1;
   }
   // All arguments were provided
   else {
     std::fstream asm_src;
-    FILE* asm_out = fopen("processed.asm", "wb");
+    FILE* asm_out = fopen(output_filename, "wb");
     asm_src.open(input, std::ios::in);
     if (asm_src.is_open() && asm_out != NULL) {
       fprintf(asm_out, "[%s]\n", module_name);
