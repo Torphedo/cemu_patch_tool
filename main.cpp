@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
           line.find("\t.weak") == 0 || line.find("\t.data") == 0 || line.find("\t.ident") == 0 ||
           line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
           line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
-          line.find("\tbl __eabi") == 0)
+          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0)
         {
           continue; // Skip this line
         }
@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
           }
         }
 
+        /*
         // Replace GCC's weird "%r#" register notation
         while (line.find("%r") != -1) {
           size_t pos = line.find("%r");
@@ -76,6 +77,20 @@ int main(int argc, char** argv) {
           if (pos != -1) {
             line.replace(pos, 3, "cr");
           }
+        }
+        */
+
+
+        // Replace ".asciz" with ".string"
+        if (line.find(".asciz") != -1) {
+            unsigned long pos = line.find(".asciz");
+            line.replace(pos - 1, 8, ".string ");
+        }
+
+        // Replace "#" comment syntax with ";"
+        if (line.find("#") != -1) {
+            unsigned long pos = line.find("#");
+            line.replace(pos, 1, ";");
         }
 
         // I'm sorry for this code...it's really janky, but it does the job.
