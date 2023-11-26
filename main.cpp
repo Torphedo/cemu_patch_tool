@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <iostream>
 #include <string>
@@ -6,6 +7,14 @@
 
 #include "logging.h"
 #include "asm_functions.h"
+
+// If we see any of these patterns, just skip to the next line.
+static const char* skip_lines[] = {
+    "\t.file", "\t.text", "\t.globl", "\t.type", "\t.size", "\t.section",
+    "\t.weak", "\t.data", "\t.ident", "\t.addrsig", "\t.addrsig_sym",
+    "\t.machine", "\t.gnu_attribute", ".lcomm", "\t.align", "\tbl __eabi",
+    "\t.p2align", "\t.cfi_"
+};
 
 int main(int argc, char** argv) {
     static const char* input = argv[1];
@@ -51,87 +60,87 @@ int main(int argc, char** argv) {
     
     std::string line;
     while (getline(asm_src, line)) {
-      // Remove compiler clutter
-      if (line.find("\t.file") == 0 || line.find("\t.text") == 0 || line.find("\t.globl") == 0 ||
-          line.find("\t.type") == 0 || line.find("\t.size") == 0 || line.find("\t.section") == 0 ||
-          line.find("\t.weak") == 0 || line.find("\t.data") == 0 || line.find("\t.ident") == 0 ||
-          line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
-          line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
-          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0 || line.find("\t.cfi_") == 0)
-      {
-        continue; // Skip this line if we find any of these strings.
-      }
+        // Remove compiler clutter
+
+        // Skip this line if we find any of the strings from the array
+        uint32_t array_size = (sizeof(skip_lines) / sizeof(char*));
+        for (int i = 0; i < array_size; i++) {
+            if (line.find(skip_lines[i]) == 0) {
+                continue; // Skip this line if we find a match
+            }
+        }
+
+        // Replace the "." in front of ".LC0:" and other GCC-generated labels for local variables.
+        // Cemu doesn't like them and tries to interpret as an assembler directive/macro.
+        while (line.find(".L") != -1) {
+            size_t pos = line.find(".L");
+            if (pos != -1) {
+                line.replace(pos, 2, "L");
+            }
+        }
     
-      // Replace the "." in front of ".LC0:" and other GCC-generated labels for local variables.
-      // Cemu doesn't like them and tries to interpret as an assembler directive/macro.
-      while (line.find(".L") != -1) {
-          size_t pos = line.find(".L");
-          if (pos != -1) {
-              line.replace(pos, 2, "L");
-          }
-      }
+        // Replace "$" charcters with an underscore so we don't break the label
+        // names for Cemu.
+        while (line.find("$") != -1) {
+            size_t pos = line.find("$");
+            if (pos != -1) {
+                line.replace(pos, 1, "_");
+            }
+        }
     
-      // Replace "$" charcters with an underscore so we don't break the label
-      // names for Cemu.
-      while (line.find("$") != -1) {
-          size_t pos = line.find("$");
-          if (pos != -1) {
-              line.replace(pos, 1, "_");
-          }
-      }
+        // Replace ".asciz" with ".string"
+        if (line.find(".asciz") != -1) {
+            unsigned long pos = line.find(".asciz");
+            line.replace(pos - 1, 8, ".string ");
+        }
     
-      // Replace ".asciz" with ".string"
-      if (line.find(".asciz") != -1) {
-          unsigned long pos = line.find(".asciz");
-          line.replace(pos - 1, 8, ".string ");
-      }
+        // Replace "#" comment syntax with ";"
+        if (line.find("#") != -1) {
+            unsigned long pos = line.find("#");
+            line.replace(pos, 1, ";");
+        }
     
-      // Replace "#" comment syntax with ";"
-      if (line.find("#") != -1) {
-          unsigned long pos = line.find("#");
-          line.replace(pos, 1, ";");
-      }
+        // .set macro. Replace it with a new label and a .long.
+        // Old:
+        // Ltmp0:
+        // .set LTOC, Ltmp0+32768
+
+        // New: 
+        // Ltmp0:
+        // LTOC:
+        //     .long Ltmp0+32768
+        if (line.find(".set") != -1) {
+            line.replace(0, sizeof(".set"), ""); // Delete the .set part
+            line.replace(line.find(","), 1, ":\n\t.long");
+        }
     
-      // .set macro. Replace it with a new label and a .long.
-      // Replace this:
-      // Ltmp0:
-      // .set LTOC, Ltmp0+32768
-      //
-      // With this:
-      //
-      // Ltmp0:
-      // LTOC:
-      //     .long Ltmp0+32768
-      if (line.find(".set") != -1) {
-          line.replace(0, sizeof(".set"), ""); // Delete the .set part
-          line.replace(line.find(","), 1, ":\n\t.long");
-      }
+        // I'm sorry for this code...it's really janky, but it does the job.
+        // See Appendix B.9 Miscellaneous Mnemonics in this PDF:
+        // https://arcb.csc.ncsu.edu/~mueller/cluster/ps3/SDK3.0/docs/arch/PPC_Vers202_Book1_public.pdf
+        // la Rx,D(Ry) is equivalent to: addi Rx,Ry,D
+        // la Rx,v is equivalent to: addi Rx,Rv,Dv
+        if (line.find("\tla ") == 0) {
+            // Replace "la" with "addi"
+            line.replace(0, 3, "\taddi");
     
-      // I'm sorry for this code...it's really janky, but it does the job.
-      // See Appendix B.9 Miscellaneous Mnemonics in this PDF:
-      // https://arcb.csc.ncsu.edu/~mueller/cluster/ps3/SDK3.0/docs/arch/PPC_Vers202_Book1_public.pdf
-      if (line.find("\tla ") == 0) {
-          // Replace "la" with "addi"
-          line.replace(0, 3, "\taddi");
+            size_t label_pos = line.find(',');
+            size_t ry_pos = line.find('(');
+            size_t ry_end = line.find(')');
+            size_t label_length = ry_pos - label_pos;
+            size_t ry_length = ry_end - ry_pos;
     
-          size_t label_pos = line.find(',');
-          size_t ry_pos = line.find('(');
-          size_t ry_end = line.find(')');
-          size_t label_length = ry_pos - label_pos;
-          size_t ry_length = ry_end - ry_pos;
+            char* buffer = (char*)calloc(1, label_length + ry_length);
     
-          char* buffer = (char*)calloc(1, label_length + ry_length);
+            strncpy(buffer, &line.c_str()[ry_pos + 1], ry_length - 1);
+            strncat(buffer, &line.c_str()[label_pos], label_length);
     
-          strncpy(buffer, &line.c_str()[ry_pos + 1], ry_length - 1);
-          strncat(buffer, &line.c_str()[label_pos], label_length);
+            line.replace(label_pos + 1, label_length + ry_length, buffer);
+            free(buffer);
+        }
     
-          line.replace(label_pos + 1, label_length + ry_length, buffer);
-          free(buffer);
-      }
-    
-      // Print to file
-      fwrite(line.c_str(), line.size(), 1, asm_out);
-      fprintf(asm_out, "\n");
+        // Print to file
+        fwrite(line.c_str(), line.size(), 1, asm_out);
+        fprintf(asm_out, "\n");
     } // while (getline(asm_src, line))
     
     // Instructions placed after the ".origin" will start replacing from the hooking address.
