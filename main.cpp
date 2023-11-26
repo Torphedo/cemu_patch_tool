@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
           line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
           line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
           line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0 || line.find("\t.set") == 0 ||
-          line.find("\tcfi_") == 0)
+          line.find("\t.cfi_") == 0)
         {
           continue; // Skip this line
         }
