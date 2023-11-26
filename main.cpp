@@ -16,6 +16,17 @@ static const char* skip_lines[] = {
     "\t.p2align", "\t.cfi_"
 };
 
+bool should_skip_line(const char* line) {
+    // Tell caller to skip if we find any of the strings from the array
+    uint32_t array_size = (sizeof(skip_lines) / sizeof(char*));
+    for (uint32_t i = 0; i < array_size; i++) {
+        if (strstr(line, skip_lines[i]) != NULL) {
+            return true; // Skip if we found a match
+        }
+    }
+    return false; // No match.
+}
+
 int main(int argc, char** argv) {
     static const char* input = argv[1];
     static const char* module_name = argv[2];
@@ -60,14 +71,9 @@ int main(int argc, char** argv) {
     
     std::string line;
     while (getline(asm_src, line)) {
-        // Remove compiler clutter
-
-        // Skip this line if we find any of the strings from the array
-        uint32_t array_size = (sizeof(skip_lines) / sizeof(char*));
-        for (int i = 0; i < array_size; i++) {
-            if (line.find(skip_lines[i]) == 0) {
-                continue; // Skip this line if we find a match
-            }
+        // Skip this line if it has assembler junk Cemu can't understand
+        if (should_skip_line(line.c_str())) {
+            continue;
         }
 
         // Replace the "." in front of ".LC0:" and other GCC-generated labels for local variables.
