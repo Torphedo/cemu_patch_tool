@@ -50,7 +50,8 @@ int main(int argc, char** argv) {
           line.find("\t.weak") == 0 || line.find("\t.data") == 0 || line.find("\t.ident") == 0 ||
           line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
           line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
-          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0)
+          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0 || line.find("\t.set") == 0 ||
+          line.find("\tcfi_") == 0)
         {
           continue; // Skip this line
         }
@@ -61,6 +62,15 @@ int main(int argc, char** argv) {
           size_t pos = line.find(".L");
           if (pos != -1) {
             line.replace(pos, 2, "L");
+          }
+        }
+
+        // Replace "$" charcters with an underscore so we don't break the label
+        // names for Cemu.
+        while (line.find("$") != -1) {
+          size_t pos = line.find("$");
+          if (pos != -1) {
+            line.replace(pos, 1, "_");
           }
         }
 
