@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     if (asm_src.is_open() && asm_out != NULL) {
       fprintf(asm_out, "[%s]\n", module_name);
       fprintf(asm_out, "moduleMatches = 0x6267bfd0\n.origin = codecave\n\n");
+      fprintf(asm_out, "; Assembly auto-generated with Zig and filtered through Torph's Cemu patch tool.\n\n");
 
       /* The entry_point label saves all registers to the stack, calls the user's
        * main() function, then reloads all register data from the stack.
@@ -50,8 +51,7 @@ int main(int argc, char** argv) {
           line.find("\t.weak") == 0 || line.find("\t.data") == 0 || line.find("\t.ident") == 0 ||
           line.find("\t.addrsig") == 0 || line.find("\t.addrsig_sym") == 0 || line.find("\t.machine") == 0 ||
           line.find("\t.gnu_attribute") == 0 || line.find(".lcomm") == 0 || line.find("\t.align") == 0 ||
-          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0 || line.find("\t.set") == 0 ||
-          line.find("\t.cfi_") == 0)
+          line.find("\tbl __eabi") == 0 || line.find("\t.p2align") == 0 || line.find("\t.cfi_") == 0)
         {
           continue; // Skip this line
         }
@@ -101,6 +101,21 @@ int main(int argc, char** argv) {
         if (line.find("#") != -1) {
             unsigned long pos = line.find("#");
             line.replace(pos, 1, ";");
+        }
+
+        // .set macro. Replace it with a new label and a .long.
+        // Replace this:
+        // Ltmp0:
+        // .set LTOC, Ltmp0+32768
+        //
+        // With this:
+        //
+        // Ltmp0:
+        // LTOC:
+        //     .long Ltmp0+32768
+        if (line.find(".set") != -1) {
+            line.replace(0, sizeof(".set"), ""); // Delete the .set part
+            line.replace(line.find(","), 1, ":\n\t.long");
         }
 
         // I'm sorry for this code...it's really janky, but it does the job.
