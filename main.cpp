@@ -80,23 +80,6 @@ int main(int argc, char** argv) {
           }
       }
     
-      /*
-      // Replace GCC's weird "%r#" register notation
-      while (line.find("%r") != -1) {
-          size_t pos = line.find("%r");
-          if (pos != -1) {
-              line.replace(pos, 2, "r");
-          }
-      }
-      while (line.find("%cr") != -1) {
-          size_t pos = line.find("%cr");
-          if (pos != -1) {
-              line.replace(pos, 3, "cr");
-          }
-      }
-      */
-    
-    
       // Replace ".asciz" with ".string"
       if (line.find(".asciz") != -1) {
           unsigned long pos = line.find(".asciz");
@@ -160,3 +143,4 @@ int main(int argc, char** argv) {
     asm_src.close();
     
 }
+
